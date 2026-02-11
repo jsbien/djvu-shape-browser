@@ -71,11 +71,13 @@ class ShapeRenderer:
 
         # Create 1-bit image from raw data
         image = Image.frombytes(
-            mode="1",
-            size=(shape.width, shape.height),
-            data=image_bytes,
-            decoder_name="raw",
-            args=("1;I", 0, 1)
+            "1",
+            (shape.width, shape.height),
+            image_bytes,
+            "raw",
+            "1;I",
+            0,
+            1
         )
 
         return image
