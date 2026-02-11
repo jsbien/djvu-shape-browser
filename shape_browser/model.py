@@ -88,7 +88,7 @@ class ShapeModel:
                   self.root_shapes.append(shape)
 
     # Sort roots by height descending
-    self.root_shapes.sort(key=lambda s: s.height, reverse=True)
+          self.root_shapes.sort(key=lambda s: s.height, reverse=True)
 
     def _attach_occurrences(self, blit_rows):
         for row in blit_rows:
