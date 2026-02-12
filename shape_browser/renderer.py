@@ -54,28 +54,19 @@ class ShapeRenderer:
     # -------------------------------------------------
 
     def _decode_pbm(self, shape):
-        """
-        Decode raw PBM (1-bit bitmap) stored in shape into PIL image.
-        Assumes shape has:
-            - width
-            - height
-            - bitmap (bytes)
-        """
-
         width = shape.width
         height = shape.height
         data = shape.bits
 
-        # PBM stored as packed bits per row
-        # Each row is padded to full bytes
-        row_bytes = (width + 7) // 8
-
         image = Image.frombytes(
-            mode="1",
-            size=(width, height),
-            data=data,
-            decoder_name="raw",
-            args=("1;I", 0, 1),
+            "1",                      # mode
+            (width, height),          # size
+            data,                     # data
+            "raw",                    # decoder
+            "1;I",                    # raw mode
+            0,                        # stride
+            1,                        # orientation
         )
 
         return image
+    
