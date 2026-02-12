@@ -20,15 +20,14 @@ class ShapeRenderer:
     # Public API
     # -------------------------
 
-    def get_tk_image(self, shape):
-        """
-        Returns a Tkinter PhotoImage for the given shape.
-        """
-        if shape.id not in self._tk_cache:
-            pil_image = self._get_pil_image(shape)
-            self._tk_cache[shape.id] = ImageTk.PhotoImage(pil_image)
+    def get_pil_image(self, shape):
+        if shape.id not in self._pil_cache:
+            self._pil_cache[shape.id] = self._decode_pbm(shape)
+        return self._pil_cache[shape.id]
 
-        return self._tk_cache[shape.id]
+    def get_tk_image(self, shape):
+        pil_image = self.get_pil_image(shape)
+        return ImageTk.PhotoImage(pil_image)
 
     def clear_cache(self):
         """

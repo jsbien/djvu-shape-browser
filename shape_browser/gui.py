@@ -1,3 +1,4 @@
+from PIL import Image, ImageTk
 import tkinter as tk
 from tkinter import ttk
 
@@ -19,96 +20,164 @@ class ShapeBrowserGUI:
         self.database_name = database_name
         self.version = version
 
+        self.selected_shape = None
+
         self.root.title("Shape Browser")
 
         self._build_layout()
-        self._populate_tree()   # (temporary until we replace with grid)
+        self._populate_grid()
 
-    # -------------------------
+    # -------------------------------------------------
     # Layout
-    # -------------------------
+    # -------------------------------------------------
 
     def _build_layout(self):
         self.main_frame = ttk.Frame(self.root)
         self.main_frame.pack(fill="both", expand=True)
 
-        # Left: Tree
-        self.tree = ttk.Treeview(self.main_frame)
-        self.tree.pack(side="left", fill="both", expand=True)
+        # Left: scrollable canvas for grid
+        self.canvas = tk.Canvas(self.main_frame)
+        self.scrollbar = ttk.Scrollbar(
+            self.main_frame,
+            orient="vertical",
+            command=self.canvas.yview,
+        )
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
-        self.tree.bind("<<TreeviewSelect>>", self._on_select)
+        self.scrollbar.pack(side="right", fill="y")
+        self.canvas.pack(side="left", fill="both", expand=True)
 
-        # Right: Preview frame
-        self.preview_frame = ttk.Frame(self.main_frame)
-        self.preview_frame.pack(side="right", fill="both", expand=True)
+        # Internal frame inside canvas
+        self.grid_frame = ttk.Frame(self.canvas)
+        self.canvas.create_window((0, 0), window=self.grid_frame, anchor="nw")
 
-        # Metadata label
+        self.grid_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(
+                scrollregion=self.canvas.bbox("all")
+            ),
+        )
+
+        # Right: side panel
+        self.side_panel = ttk.Frame(self.root, width=300)
+        self.side_panel.pack(side="right", fill="y")
+
         self.metadata_label = ttk.Label(
-            self.preview_frame,
+            self.side_panel,
             text="Select a shape",
-            justify="left"
+            justify="left",
         )
         self.metadata_label.pack(anchor="nw", padx=10, pady=10)
 
-        # Image label
-        self.image_label = ttk.Label(self.preview_frame)
-        self.image_label.pack(anchor="center", padx=10, pady=10)
-
-    # -------------------------
-    # Tree Population
-    # -------------------------
-
-    def _populate_tree(self):
-        for shape in self.model.root_shapes:
-            self._insert_shape("", shape)
-
-    def _insert_shape(self, parent_node, shape):
-        label = f"[{shape.depth}] Shape {shape.id} (h={shape.height})"
-
-        node_id = self.tree.insert(
-            parent_node,
-            "end",
-            text=label,
-            values=(shape.id,)
+        self.occurrence_label = ttk.Label(
+            self.side_panel,
+            text="",
+            justify="left",
         )
+        self.occurrence_label.pack(anchor="nw", padx=10, pady=10)
 
-        for child in shape.children:
-            self._insert_shape(node_id, child)
+    # -------------------------------------------------
+    # Grid Population
+    # -------------------------------------------------
 
-    # -------------------------
-    # Selection Handling
-    # -------------------------
+    def _populate_grid(self):
+        print("Populating grid...")
+        shapes = self.model.root_shapes
+        columns = 6  # fixed for now
 
-    def _on_select(self, event):
-        selected = self.tree.selection()
-        if not selected:
-            return
+        for index, shape in enumerate(shapes):
+            if index % 50 == 0:
+                print(index)
 
-        node = selected[0]
+            row = index // columns
+            col = index % columns
 
-        # Extract shape ID from label
-        text = self.tree.item(node, "text")
-        shape_id = int(text.split("Shape ")[1].split()[0])
+            tile = self._create_tile(shape)
+            tile.grid(row=row, column=col, padx=5, pady=5)
 
-        shape = self.model.get_shape(shape_id)
-        self._update_preview(shape)
+    def _create_tile(self, shape):
+        frame = ttk.Frame(
+            self.grid_frame,
+            width=self.tile_size,
+            height=self.tile_size,
+        )
+        frame.grid_propagate(False)
 
-    # -------------------------
-    # Preview Update
-    # -------------------------
+        pil_image = self.renderer.get_pil_image(shape)
 
-    def _update_preview(self, shape):
+        # Scale if needed
+        max_size = self.tile_size - 10
+        w, h = pil_image.size
+
+        if w > max_size or h > max_size:
+            scale = min(max_size / w, max_size / h)
+            new_w = int(w * scale)
+            new_h = int(h * scale)
+            pil_image = pil_image.resize((new_w, new_h), Image.NEAREST)
+
+        tk_image = ImageTk.PhotoImage(pil_image)
+
+        label = ttk.Label(frame, image=tk_image)
+        label.image = tk_image
+        label.pack(expand=True)
+
+        label.bind("<Button-1>", lambda e, s=shape: self._on_select(s))
+
+        return frame
+    
+    def _create_tile(self, shape):
+        frame = ttk.Frame(
+            self.grid_frame,
+            width=self.tile_size,
+            height=self.tile_size,
+        )
+        frame.grid_propagate(False)
+
+        pil_image = self.renderer.get_pil_image(shape)
+
+        max_size = self.tile_size - 10
+        w, h = pil_image.size
+
+        if w > max_size or h > max_size:
+            scale = min(max_size / w, max_size / h)
+            new_w = max(1, int(w * scale))
+            new_h = max(1, int(h * scale))
+            pil_image = pil_image.resize((new_w, new_h), Image.NEAREST)
+
+        tk_image = ImageTk.PhotoImage(pil_image)
+
+        label = ttk.Label(frame, image=tk_image)
+        label.image = tk_image
+        label.pack(expand=True)
+
+        label.bind("<Button-1>", lambda e, s=shape: self._on_select(s))
+
+        return frame
+
+
+    # -------------------------------------------------
+    # Selection
+    # -------------------------------------------------
+
+    def _on_select(self, shape):
+        self.selected_shape = shape
+        self._update_side_panel(shape)
+
+    def _update_side_panel(self, shape):
         metadata = (
             f"Shape ID: {shape.id}\n"
-            f"Parent ID: {shape.parent_id}\n"
+            f"Size: {shape.width} x {shape.height}\n"
             f"Depth: {shape.depth}\n"
             f"Usage count: {shape.usage_count}\n"
             f"Children: {len(shape.children)}\n"
-            f"Size: {shape.width} x {shape.height}"
+            f"Parent ID: {shape.parent_id}\n"
         )
 
         self.metadata_label.config(text=metadata)
 
-        tk_image = self.renderer.get_tk_image(shape)
-        self.image_label.config(image=tk_image)
-        self.image_label.image = tk_image  # keep reference
+        occurrences = "\n".join(
+            f"Page {occ.page_number}"
+            for occ in shape.occurrences[:50]
+        )
+
+        self.occurrence_label.config(text=occurrences)
