@@ -64,7 +64,7 @@ class ShapeRenderer:
 
         width = shape.width
         height = shape.height
-        data = shape.bitmap
+        data = shape.bits
 
         # PBM stored as packed bits per row
         # Each row is padded to full bytes
