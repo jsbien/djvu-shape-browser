@@ -7,7 +7,7 @@ from renderer import ShapeRenderer
 from gui import ShapeBrowserGUI
 
 
-VERSION = "shape-browser-basic"
+VERSION = "0.2"
 
 
 def parse_arguments():
