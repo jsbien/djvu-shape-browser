@@ -19,6 +19,13 @@ class ShapeBrowserGUI:
         self.tile_size = tile_size
         self.database_name = database_name
         self.version = version
+        # Pagination state
+        self.page_size = 200
+        self.current_page = 0
+        self.shapes = self.model.root_shapes
+        self.total_pages = (
+            (len(self.shapes) + self.page_size - 1) // self.page_size
+        )
 
         self.selected_shape = None
 
@@ -34,6 +41,27 @@ class ShapeBrowserGUI:
     def _build_layout(self):
         self.main_frame = ttk.Frame(self.root)
         self.main_frame.pack(fill="both", expand=True)
+
+        # Navigation bar
+        self.nav_frame = ttk.Frame(self.main_frame)
+        self.nav_frame.pack(side="top", fill="x")
+
+        self.prev_button = ttk.Button(
+            self.nav_frame,
+            text="Previous",
+            command=self._prev_page,
+        )
+        self.prev_button.pack(side="left", padx=5, pady=5)
+
+        self.page_label = ttk.Label(self.nav_frame, text="")
+        self.page_label.pack(side="left", padx=10)
+
+        self.next_button = ttk.Button(
+            self.nav_frame,
+            text="Next",
+            command=self._next_page,
+        )
+        self.next_button.pack(side="left", padx=5, pady=5)
 
         # Left: scrollable canvas for grid
         self.canvas = tk.Canvas(self.main_frame)
@@ -81,6 +109,7 @@ class ShapeBrowserGUI:
     # -------------------------------------------------
 
     def _populate_grid(self):
+        self._show_page(self.current_page)
         print("Populating grid...")
         shapes = self.model.root_shapes
         columns = 6  # fixed for now
@@ -153,6 +182,50 @@ class ShapeBrowserGUI:
         label.bind("<Button-1>", lambda e, s=shape: self._on_select(s))
 
         return frame
+
+
+        def _show_page(self, page_index):
+            self._clear_grid()
+
+            start = page_index * self.page_size
+            end = min(start + self.page_size, len(self.shapes))
+
+            columns = 6
+
+            for index, shape in enumerate(self.shapes[start:end]):
+                row = index // columns
+                col = index % columns
+
+                tile = self._create_tile(shape)
+                tile.grid(row=row, column=col, padx=5, pady=5)
+
+            self.page_label.config(
+                text=f"Page {self.current_page + 1} / {self.total_pages}"
+            )
+
+            self.prev_button.config(
+                state="normal" if self.current_page > 0 else "disabled"
+            )
+            self.next_button.config(
+                state="normal" if self.current_page < self.total_pages - 1 else "disabled"
+            )
+
+
+        def _clear_grid(self):
+            for widget in self.grid_frame.winfo_children():
+                widget.destroy()
+
+
+        def _prev_page(self):
+            if self.current_page > 0:
+                self.current_page -= 1
+                self._show_page(self.current_page)
+
+
+        def _next_page(self):
+            if self.current_page < self.total_pages - 1:
+                self.current_page += 1
+                self._show_page(self.current_page)
 
 
     # -------------------------------------------------
