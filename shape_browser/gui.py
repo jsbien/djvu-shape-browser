@@ -24,6 +24,8 @@ class ShapeBrowserGUI:
 
         # Selection state
         self.shape_positions = {}
+        self.index_by_shape_id = {}
+        self.current_index = None
         self.current_highlight = None
 
         # Panel state
@@ -33,6 +35,9 @@ class ShapeBrowserGUI:
 
         self._build_layout()
         self._draw_all_shapes()
+        self._bind_keys()
+
+        self.root.focus_set()
 
     # -------------------------------------------------
     # Layout
@@ -81,7 +86,7 @@ class ShapeBrowserGUI:
         self.occurrence_label.pack(anchor="nw", padx=10, pady=10)
 
     # -------------------------------------------------
-    # Canvas Drawing
+    # Drawing
     # -------------------------------------------------
 
     def _draw_all_shapes(self):
@@ -92,8 +97,8 @@ class ShapeBrowserGUI:
             row = index // columns
             col = index % columns
 
-            # Store position for highlight
             self.shape_positions[shape.id] = (row, col)
+            self.index_by_shape_id[shape.id] = index
 
             x = col * tile + tile // 2
             y = row * tile + tile // 2
@@ -116,20 +121,19 @@ class ShapeBrowserGUI:
         )
 
     # -------------------------------------------------
-    # Selection Highlight
+    # Selection
     # -------------------------------------------------
 
     def _on_select(self, shape):
+        self.current_index = self.index_by_shape_id[shape.id]
         self._highlight_shape(shape)
         self._update_side_panel(shape)
 
     def _highlight_shape(self, shape):
         tile = self.tile_size
 
-        # Remove previous highlight
         if self.current_highlight is not None:
             self.canvas.delete(self.current_highlight)
-            self.current_highlight = None
 
         row, col = self.shape_positions[shape.id]
 
@@ -146,6 +150,70 @@ class ShapeBrowserGUI:
             outline="red",
             width=2,
         )
+
+    # -------------------------------------------------
+    # Arrow Key Navigation
+    # -------------------------------------------------
+
+    def _bind_keys(self):
+        self.root.bind("<Left>", self._move_left)
+        self.root.bind("<Right>", self._move_right)
+        self.root.bind("<Up>", self._move_up)
+        self.root.bind("<Down>", self._move_down)
+
+        self.root.bind("<Next>", self._page_down)
+        self.root.bind("<Prior>", self._page_up)
+        self.root.bind("<Home>", self._go_top)
+        self.root.bind("<End>", self._go_bottom)
+
+    def _move_left(self, event=None):
+        if self.current_index is None:
+            return
+        if self.current_index % self.columns > 0:
+            self._select_by_index(self.current_index - 1)
+
+    def _move_right(self, event=None):
+        if self.current_index is None:
+            return
+        if self.current_index < len(self.shapes) - 1:
+            if self.current_index % self.columns < self.columns - 1:
+                self._select_by_index(self.current_index + 1)
+
+    def _move_up(self, event=None):
+        if self.current_index is None:
+            return
+        target = self.current_index - self.columns
+        if target >= 0:
+            self._select_by_index(target)
+
+    def _move_down(self, event=None):
+        if self.current_index is None:
+            return
+        target = self.current_index + self.columns
+        if target < len(self.shapes):
+            self._select_by_index(target)
+
+    def _select_by_index(self, index):
+        shape = self.shapes[index]
+        self.current_index = index
+        self._highlight_shape(shape)
+        self._update_side_panel(shape)
+
+    # -------------------------------------------------
+    # Scroll Navigation
+    # -------------------------------------------------
+
+    def _page_down(self, event=None):
+        self.canvas.yview_scroll(1, "page")
+
+    def _page_up(self, event=None):
+        self.canvas.yview_scroll(-1, "page")
+
+    def _go_top(self, event=None):
+        self.canvas.yview_moveto(0)
+
+    def _go_bottom(self, event=None):
+        self.canvas.yview_moveto(1)
 
     # -------------------------------------------------
     # Panel Toggle
