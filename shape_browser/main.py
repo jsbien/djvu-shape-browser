@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 import tkinter as tk
 
 from repository import ShapeRepository
@@ -7,28 +8,39 @@ from renderer import ShapeRenderer
 from gui import ShapeBrowserGUI
 
 
+PROGRAM_NAME = "Shape Browser"
 VERSION = "0.2"
+BUILD_TIMESTAMP = datetime.now().strftime("%Y-%m-%d-%H%M%S")
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description="Shape Browser — browse canonical glyph shapes"
+        description="Browse glyph shapes stored in MariaDB."
     )
 
-    parser.add_argument("--host", required=True, help="MariaDB host")
-    parser.add_argument("--user", required=True, help="MariaDB user")
-    parser.add_argument("--password", required=True, help="MariaDB password")
+    parser.add_argument("--host", required=True, help="Database host")
+    parser.add_argument("--user", required=True, help="Database user")
+    parser.add_argument("--password", required=True, help="Database password")
     parser.add_argument("--database", required=True, help="Database name")
-    parser.add_argument("--document", required=True, type=int,
-                        help="Document ID to load")
-    parser.add_argument("--tile-size", type=int, default=140,
-                        help="Grid tile size in pixels (default: 140)")
+    parser.add_argument(
+        "--document",
+        required=True,
+        help="Document ID to load (required)",
+    )
 
     return parser.parse_args()
 
 
 def main():
     args = parse_arguments()
+
+    print(f"{PROGRAM_NAME} {VERSION}")
+    print(f"Build: {BUILD_TIMESTAMP}")
+    print("Connecting to database...")
+
+    # -------------------------------------------------
+    # Repository
+    # -------------------------------------------------
 
     repo = ShapeRepository(
         host=args.host,
@@ -37,21 +49,40 @@ def main():
         database=args.database,
     )
 
-    shape_rows = repo.fetch_shapes(args.document)
-    blit_rows = repo.fetch_blits(args.document)
+    # -------------------------------------------------
+    # Load shapes + blits
+    # -------------------------------------------------
 
-    model = ShapeModel(shape_rows, blit_rows)
-    renderer = ShapeRenderer()
+    print("Loading shapes...")
+    shapes = repo.fetch_shapes(args.document)
+
+    print("Loading blits...")
+    blits = repo.fetch_blits(args.document)
+
+    # -------------------------------------------------
+    # Build model
+    # -------------------------------------------------
+
+    print("Building model...")
+    model = ShapeModel(shapes, blits)
+
+    # -------------------------------------------------
+    # Start GUI
+    # -------------------------------------------------
+
+    print("Launching GUI...")
 
     root = tk.Tk()
+    renderer = ShapeRenderer()
 
     app = ShapeBrowserGUI(
         root=root,
         model=model,
         renderer=renderer,
-        tile_size=args.tile_size,
+        tile_size=140,
         database_name=args.database,
         version=VERSION,
+        build_timestamp=BUILD_TIMESTAMP,
     )
 
     root.mainloop()
