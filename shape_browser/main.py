@@ -9,7 +9,7 @@ from gui import ShapeBrowserGUI
 
 
 PROGRAM_NAME = "Shape Browser"
-VERSION = "0.2"
+VERSION = "0.4"
 BUILD_TIMESTAMP = datetime.now().strftime("%Y-%m-%d-%H%M%S")
 
 

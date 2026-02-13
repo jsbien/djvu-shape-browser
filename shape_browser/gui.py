@@ -24,9 +24,9 @@ class ShapeBrowserGUI:
         self.version = version
         self.build_timestamp = build_timestamp
 
-        # Sort roots by height descending (stable order)
+        # Full tree internally
         self.all_shapes = sorted(
-            self.model.root_shapes,
+            self.model.shapes.values(),
             key=lambda s: s.height,
             reverse=True,
         )
@@ -46,7 +46,11 @@ class ShapeBrowserGUI:
 
         self._build_menu()
         self._build_layout()
-        self._draw_all_shapes()
+
+        # Default startup filter: depth = 0 (roots only)
+        self.depth_max_entry.insert(0, "0")
+        self._apply_filters()
+
         self._bind_keys()
         self._update_info_bar()
 
@@ -124,6 +128,10 @@ class ShapeBrowserGUI:
         self.ratio_max_entry = ttk.Entry(self.filter_frame, width=6)
         self.ratio_max_entry.pack(side="left")
 
+        ttk.Label(self.filter_frame, text="  Max depth:").pack(side="left", padx=5)
+        self.depth_max_entry = ttk.Entry(self.filter_frame, width=4)
+        self.depth_max_entry.pack(side="left")
+
         self.apply_button = ttk.Button(
             self.filter_frame,
             text="Apply",
@@ -138,7 +146,7 @@ class ShapeBrowserGUI:
         )
         self.clear_button.pack(side="left", padx=5)
 
-        # Toggle panel button
+        # Toggle panel
         self.toggle_button = ttk.Button(
             self.main_frame,
             text="Hide panel",
@@ -169,13 +177,6 @@ class ShapeBrowserGUI:
         )
         self.metadata_label.pack(anchor="nw", padx=10, pady=10)
 
-        self.occurrence_label = ttk.Label(
-            self.side_panel,
-            text="",
-            justify="left",
-        )
-        self.occurrence_label.pack(anchor="nw", padx=10, pady=10)
-
     # -------------------------------------------------
     # Filtering
     # -------------------------------------------------
@@ -183,11 +184,21 @@ class ShapeBrowserGUI:
     def _apply_filters(self):
         def parse_int(entry):
             value = entry.get().strip()
-            return int(value) if value else None
+            if not value:
+                return None
+            try:
+                return int(value)
+            except ValueError:
+                return None
 
         def parse_float(entry):
             value = entry.get().strip()
-            return float(value) if value else None
+            if not value:
+                return None
+            try:
+                return float(value)
+            except ValueError:
+                return None
 
         direct_min = parse_int(self.direct_min_entry)
         direct_max = parse_int(self.direct_max_entry)
@@ -197,6 +208,7 @@ class ShapeBrowserGUI:
         height_max = parse_int(self.height_max_entry)
         ratio_min = parse_float(self.ratio_min_entry)
         ratio_max = parse_float(self.ratio_max_entry)
+        depth_max = parse_int(self.depth_max_entry)
 
         filtered = []
 
@@ -218,10 +230,12 @@ class ShapeBrowserGUI:
                 continue
 
             ratio = shape.height / shape.width if shape.width else 0
-
             if ratio_min is not None and ratio < ratio_min:
                 continue
             if ratio_max is not None and ratio > ratio_max:
+                continue
+
+            if depth_max is not None and shape.depth > depth_max:
                 continue
 
             filtered.append(shape)
@@ -234,7 +248,7 @@ class ShapeBrowserGUI:
         self._update_info_bar()
 
     def _clear_filters(self):
-        entries = [
+        for entry in [
             self.direct_min_entry,
             self.direct_max_entry,
             self.subtree_min_entry,
@@ -243,9 +257,8 @@ class ShapeBrowserGUI:
             self.height_max_entry,
             self.ratio_min_entry,
             self.ratio_max_entry,
-        ]
-
-        for entry in entries:
+            self.depth_max_entry,
+        ]:
             entry.delete(0, tk.END)
 
         self.filtered_shapes = self.all_shapes
@@ -315,14 +328,13 @@ class ShapeBrowserGUI:
         )
 
     # -------------------------------------------------
-    # Selection & Navigation
+    # Selection
     # -------------------------------------------------
 
     def _on_select(self, shape):
         self.current_index = self.index_by_shape_id[shape.id]
         self._highlight_shape(shape)
         self._update_side_panel(shape)
-        self._ensure_visible(shape)
 
     def _highlight_shape(self, shape):
         tile = self.tile_size
@@ -359,27 +371,9 @@ class ShapeBrowserGUI:
 
         self.metadata_label.config(text=metadata)
 
-    def _ensure_visible(self, shape):
-        tile = self.tile_size
-        row, col = self.shape_positions[shape.id]
-
-        top = row * tile
-        bottom = top + tile
-
-        canvas_top = self.canvas.canvasy(0)
-        canvas_bottom = canvas_top + self.canvas.winfo_height()
-
-        scroll_region = self.canvas.bbox("all")
-        if not scroll_region:
-            return
-
-        total_height = scroll_region[3]
-
-        if top < canvas_top:
-            self.canvas.yview_moveto(top / total_height)
-        elif bottom > canvas_bottom:
-            new_top = bottom - self.canvas.winfo_height()
-            self.canvas.yview_moveto(new_top / total_height)
+    # -------------------------------------------------
+    # Keyboard navigation
+    # -------------------------------------------------
 
     def _bind_keys(self):
         self.root.bind("<Left>", self._move_left)
@@ -419,7 +413,6 @@ class ShapeBrowserGUI:
         self.current_index = index
         self._highlight_shape(shape)
         self._update_side_panel(shape)
-        self._ensure_visible(shape)
 
     # -------------------------------------------------
     # Panel toggle
