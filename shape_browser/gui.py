@@ -12,18 +12,20 @@ class ShapeBrowserGUI:
         root,
         model,
         renderer,
-        tile_size,
         database_name,
         version,
         build_timestamp,
+        document_path,
+        tile_size=140,
     ):
         self.root = root
         self.model = model
         self.renderer = renderer
-        self.tile_size = tile_size
         self.database_name = database_name
         self.version = version
         self.build_timestamp = build_timestamp
+        self.document_path = document_path
+        self.tile_size = tile_size
 
         self.all_shapes = sorted(
             self.model.shapes.values(),
@@ -38,11 +40,7 @@ class ShapeBrowserGUI:
         self.index_by_shape_id = {}
         self.current_index = None
         self.current_highlight = None
-
-        # Subtree mode (single level only)
         self.current_subtree_root = None
-
-        # Occurrence panel state
         self.occurrences_visible = False
 
         self.root.title(f"{PROGRAM_NAME} {self.version}")
@@ -89,7 +87,6 @@ class ShapeBrowserGUI:
         self.main_frame = ttk.Frame(self.root)
         self.main_frame.pack(fill="both", expand=True)
 
-        # Info bar
         self.info_frame = ttk.Frame(self.main_frame)
         self.info_frame.pack(side="top", fill="x")
 
@@ -102,39 +99,10 @@ class ShapeBrowserGUI:
             command=self._exit_subtree_mode,
         )
 
-        # Filter row
         self.filter_frame = ttk.Frame(self.main_frame)
         self.filter_frame.pack(side="top", fill="x", pady=4)
 
-        ttk.Label(self.filter_frame, text="Direct:").pack(side="left")
-        self.direct_min = ttk.Entry(self.filter_frame, width=4)
-        self.direct_min.pack(side="left")
-        ttk.Label(self.filter_frame, text="-").pack(side="left")
-        self.direct_max = ttk.Entry(self.filter_frame, width=4)
-        self.direct_max.pack(side="left")
-
-        ttk.Label(self.filter_frame, text=" Subtree:").pack(side="left")
-        self.subtree_min = ttk.Entry(self.filter_frame, width=4)
-        self.subtree_min.pack(side="left")
-        ttk.Label(self.filter_frame, text="-").pack(side="left")
-        self.subtree_max = ttk.Entry(self.filter_frame, width=4)
-        self.subtree_max.pack(side="left")
-
-        ttk.Label(self.filter_frame, text=" Height:").pack(side="left")
-        self.height_min = ttk.Entry(self.filter_frame, width=4)
-        self.height_min.pack(side="left")
-        ttk.Label(self.filter_frame, text="-").pack(side="left")
-        self.height_max = ttk.Entry(self.filter_frame, width=4)
-        self.height_max.pack(side="left")
-
-        ttk.Label(self.filter_frame, text=" Ratio (H/W):").pack(side="left")
-        self.ratio_min = ttk.Entry(self.filter_frame, width=4)
-        self.ratio_min.pack(side="left")
-        ttk.Label(self.filter_frame, text="-").pack(side="left")
-        self.ratio_max = ttk.Entry(self.filter_frame, width=4)
-        self.ratio_max.pack(side="left")
-
-        ttk.Label(self.filter_frame, text=" Max depth:").pack(side="left")
+        ttk.Label(self.filter_frame, text="Max depth:").pack(side="left")
         self.depth_max_entry = ttk.Entry(self.filter_frame, width=4)
         self.depth_max_entry.pack(side="left")
 
@@ -150,7 +118,6 @@ class ShapeBrowserGUI:
             command=self._clear_filters,
         ).pack(side="left")
 
-        # Canvas
         self.canvas = tk.Canvas(self.main_frame)
         self.scrollbar = ttk.Scrollbar(
             self.main_frame,
@@ -162,7 +129,6 @@ class ShapeBrowserGUI:
         self.scrollbar.pack(side="right", fill="y")
         self.canvas.pack(side="left", fill="both", expand=True)
 
-        # Side panel
         self.side_panel = ttk.Frame(self.root, width=320)
         self.side_panel.pack(side="right", fill="y")
 
@@ -339,7 +305,7 @@ class ShapeBrowserGUI:
         self._update_side_panel(shape)
 
     # -------------------------------------------------
-    # Side panel with occurrences
+    # Occurrence panel
     # -------------------------------------------------
 
     def _update_side_panel(self, shape):
@@ -348,46 +314,34 @@ class ShapeBrowserGUI:
 
         ratio = shape.height / shape.width if shape.width else 0
 
-        metadata = (
-            f"Shape ID: {shape.id}\n"
-            f"Parent ID: {shape.parent_id}\n"
-            f"Size: {shape.width} x {shape.height}\n"
-            f"Ratio: {ratio:.3f}\n"
-            f"Depth: {shape.depth}\n"
-            f"Sibling index: {shape.sibling_index}\n"
-            f"Usage: {shape.usage_count}\n"
-            f"Subtree usage: {shape.subtree_count}\n"
-            f"Children: {len(shape.children)}\n"
-        )
-
         ttk.Label(
             self.side_panel,
-            text=metadata,
+            text=(
+                f"Shape ID: {shape.id}\n"
+                f"Parent: {shape.parent_id}\n"
+                f"Size: {shape.width} x {shape.height}\n"
+                f"Ratio (H/W): {ratio:.3f}\n"
+                f"Depth: {shape.depth}\n"
+                f"Usage: {shape.usage_count}\n"
+                f"Subtree usage: {shape.subtree_count}"
+            ),
             justify="left",
         ).pack(anchor="nw", padx=10, pady=5)
 
         occurrences = shape.occurrences
-
         if not occurrences:
-            ttk.Label(
-                self.side_panel,
-                text="No occurrences",
-            ).pack(anchor="nw", padx=10, pady=5)
             return
 
-        page_counts = {}
+        page_groups = {}
         for occ in occurrences:
-            page_counts.setdefault(occ.page_number, []).append(occ)
-
-        total_occ = len(occurrences)
-        total_pages = len(page_counts)
+            page_groups.setdefault(occ.page_number, []).append(occ)
 
         header_frame = ttk.Frame(self.side_panel)
         header_frame.pack(anchor="nw", fill="x", padx=10, pady=5)
 
         ttk.Label(
             header_frame,
-            text=f"Occurrences: {total_occ} ({total_pages} pages)",
+            text=f"Occurrences: {len(occurrences)} ({len(page_groups)} pages)",
         ).pack(side="left")
 
         ttk.Button(
@@ -400,14 +354,8 @@ class ShapeBrowserGUI:
         if not self.occurrences_visible:
             return
 
-        ttk.Label(
-            self.side_panel,
-            text=f"Document: {self.database_name}",
-            font=("TkDefaultFont", 9, "bold"),
-        ).pack(anchor="nw", padx=10, pady=(5, 2))
-
-        for page in sorted(page_counts.keys()):
-            count = len(page_counts[page])
+        for page in sorted(page_groups.keys()):
+            count = len(page_groups[page])
 
             page_label = tk.Label(
                 self.side_panel,
@@ -419,19 +367,33 @@ class ShapeBrowserGUI:
 
             page_label.bind(
                 "<Button-1>",
-                lambda e, p=page: self._open_page(p),
+                lambda e, p=page, occs=page_groups[page], s=shape:
+                self._open_page(p, occs, s),
             )
 
     def _toggle_occurrences(self, shape):
         self.occurrences_visible = not self.occurrences_visible
         self._update_side_panel(shape)
 
-    def _open_page(self, page_number):
-        subprocess.Popen([
-            "djview4",
-            f"--page={page_number + 1}",
-            self.database_name,  # TODO: replace with real document path
-        ])
+    # -------------------------------------------------
+    # DjView integration
+    # -------------------------------------------------
+
+    def _open_page(self, page_number, occurrences, shape):
+        page = page_number + 1  # 1-based for djview
+
+        highlights = []
+        for occ in occurrences:
+            x = occ.x
+            y = occ.y
+            w = shape.width
+            h = shape.height
+            highlights.append(f"highlight={x},{y},{w},{h}")
+
+        query = f"djvuopts=&page={page}&" + "&".join(highlights)
+        url = f"file://{self.document_path}?{query}"
+
+        subprocess.Popen(["djview4", url])
 
     # -------------------------------------------------
     # Highlight
