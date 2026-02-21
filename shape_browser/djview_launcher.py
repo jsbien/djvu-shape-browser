@@ -36,39 +36,68 @@ class DjViewLauncher:
             self.logger.addHandler(file_handler)
 
     def open_single_occurrence(self, page_number, shape, occurrence):
-        """
-        Open djview4 and highlight a single occurrence of the shape on the given page.
-
-        For now, the URL style is the same as open_occurrences, just with one highlight.
-        """
         page_1based = page_number + 1
+
+        page_w, page_h = self.page_info.get_page_size(page_number)
 
         x = occurrence.x
         y = occurrence.y
         w = shape.width
         h = shape.height
 
+        center_x = x + w / 2
+        center_y = y + h / 2
+
+        px = round(center_x / page_w, 6)
+        py = round((page_h - center_y) / page_h, 6)
+
         highlight = f"highlight={x},{y},{w},{h}"
-        query = f"djvuopts=&page={page_1based}&{highlight}"
+        showposition = f"showposition={px},{py}"
+
+        query = (
+            f"djvuopts=&page={page_1based}"
+            f"&zoom=width"
+            f"&{highlight}"
+            f"&{showposition}"
+        )
         url = f"file://{self.document_path}?{query}"
 
-        # Optional: log it (recommended)
-        if hasattr(self, "logger"):
-            lines = []
-            lines.append("=" * 60)
-            lines.append("DjView Launch Mode: SINGLE")
-            lines.append(f"Document: {self.document_path}")
-            lines.append(f"Shape ID: {shape.id}")
-            lines.append(f"DB page (0-based): {page_number}")
-            lines.append("Occurrence:")
-            lines.append(f"  x={x} y={y} w={w} h={h}")
-            lines.append("Final URL:")
-            lines.append(url)
-            lines.append("=" * 60)
-            lines.append("")
-            self.logger.info("\n".join(lines))
-
         subprocess.Popen(["djview4", url])
+
+    # def open_single_occurrence(self, page_number, shape, occurrence):
+    #     """
+    #     Open djview4 and highlight a single occurrence of the shape on the given page.
+
+    #     For now, the URL style is the same as open_occurrences, just with one highlight.
+    #     """
+    #     page_1based = page_number + 1
+
+    #     x = occurrence.x
+    #     y = occurrence.y
+    #     w = shape.width
+    #     h = shape.height
+
+    #     highlight = f"highlight={x},{y},{w},{h}"
+    #     query = f"djvuopts=&page={page_1based}&{highlight}"
+    #     url = f"file://{self.document_path}?{query}"
+
+    #     # Optional: log it (recommended)
+    #     if hasattr(self, "logger"):
+    #         lines = []
+    #         lines.append("=" * 60)
+    #         lines.append("DjView Launch Mode: SINGLE")
+    #         lines.append(f"Document: {self.document_path}")
+    #         lines.append(f"Shape ID: {shape.id}")
+    #         lines.append(f"DB page (0-based): {page_number}")
+    #         lines.append("Occurrence:")
+    #         lines.append(f"  x={x} y={y} w={w} h={h}")
+    #         lines.append("Final URL:")
+    #         lines.append(url)
+    #         lines.append("=" * 60)
+    #         lines.append("")
+    #         self.logger.info("\n".join(lines))
+
+    #     subprocess.Popen(["djview4", url])
 
     # -------------------------------------------------
     # Page mode: highlight all occurrences on a page
