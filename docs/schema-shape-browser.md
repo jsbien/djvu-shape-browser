@@ -145,3 +145,18 @@
   WHERE document_id = <doc_id> AND shape_id = <shape_id>
   ORDER BY page_number;
  
+
+ ### dictionaries
+ Links shapes to a document and indicates whether a dictionary is page-specific or shared.
+
+ Columns:
+ - id (PK)
+ - document_id (FK → documents.id)
+ - page_number (INT)
+ - >= 0 = page-specific (local) dictionary for that page
+ - -1 = shared dictionary
+ - dictionary_name (VARCHAR)
+ - for page-specific dictionaries, this is the page name the dictionary comes from
+ - for shared dictionaries, the name identifies the shared dictionary chunk/group (encoder-dependent)
+
+ Notes: Shape Browser currently does not use dictionary_name or page_number in queries; it only uses document_id to load all shapes for a document.
