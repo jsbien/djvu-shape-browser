@@ -1,3 +1,4 @@
+import io
 from PIL import Image, ImageTk
 
 
@@ -54,9 +55,21 @@ class ShapeRenderer:
     # -------------------------------------------------
 
     def _decode_pbm(self, shape):
+        data = shape.bits
+
+        # Many datasets store a full PBM (P4) file in `bits` (with header).
+        # Detect and decode it properly to avoid header bytes becoming pixels.
+        if isinstance(data, (bytes, bytearray)) and data.startswith(b"P"):
+            try:
+                img = Image.open(io.BytesIO(data))
+                return img.convert("1")
+            except Exception:
+                # Fall back to raw decode below if header parsing fails
+                pass
+
+        # Fallback: treat `bits` as raw packed 1-bit rows
         width = shape.width
         height = shape.height
-        data = shape.bits
 
         image = Image.frombytes(
             "1",                      # mode
@@ -69,4 +82,4 @@ class ShapeRenderer:
         )
 
         return image
-    
+
