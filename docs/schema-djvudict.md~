@@ -1,0 +1,118 @@
+2) docs/schema-djvudict.md
+
+$ # djvudict SQLite database schema (interpreted as “shapes”)
+$
+$ This document describes the SQLite database produced by djvudict (minidjvu-mod based).
+$
+$ Terminology (synchronized with Shape Browser)
+$ - djvudict calls the table letters, but in our terminology these are shapes.
+$ - A “shape” row can represent:
+$ - a dictionary entry (stored),
+$ - a drawn/placed shape on a page,
+$ - a non-symbol bitmap record.
+$
+$ Source of truth: docs/from Trufanov/sqlstorage.cpp and tools/jb2dumper.cpp.
+$
+$ ---
+$
+$ ## Table: forms
+$ Represents JB2 “forms” encountered in a DjVu document.
+$
+$ Columns:
+$ - id INTEGER PRIMARY KEY AUTOINCREMENT
+$ - position INTEGER UNIQUE NOT NULL
+$ - entry_name TEXT NOT NULL
+$ - type INTEGER NOT NULL
+$ - 1 = Sjbz (page)
+$ - 2 = Djbz (shared dictionary)
+$ - path_to_dump TEXT (dump folder)
+$
+$ ---
+$
+$ ## Table: sjbz_info
+$ Metadata for page forms (Sjbz).
+$
+$ Columns:
+$ - form_id INTEGER UNIQUE NOT NULL → forms.id
+$ - djbz_id INTEGER NULL → forms.id (shared dict used by this page)
+$ - width, height INTEGER NOT NULL
+$ - dpi INTEGER NOT NULL
+$ - version INTEGER NOT NULL
+$
+$ ---
+$
+$ ## Table: letters (Shapes)
+$ Stores extracted shapes / events from JB2 decoding.
+$
+$ Columns:
+$ - id INTEGER PRIMARY KEY AUTOINCREMENT
+$ - form_id INTEGER NOT NULL → forms.id
+$ - local_id INTEGER NULL (dictionary index within that form)
+$ - x, y INTEGER (placement coordinates if in_image=1)
+$ - width, height INTEGER NOT NULL
+$ - in_image INTEGER NOT NULL (0/1)
+$ - in_library INTEGER NOT NULL (0/1)
+$ - is_non_symbol INTEGER NOT NULL (0/1)
+$ - reference_id INTEGER NULL → letters.id (prototype link)
+$ - is_refinement INTEGER (0/1; see note below)
+$ - filename TEXT (dumped BMP path/name)
+$
+$ Index:
+$ - CREATE INDEX index_letters ON letters(form_id, local_id)
+$
+$ ---
+$
+$ ## Coordinate convention for (x, y) in djvudict DB
+$
+$ djvudict stores coordinates in bottom-left origin for placed shapes.
+$ In the decoder code (tools/jb2dumper.cpp) it repeatedly applies:
+$ - y = page_h - y; // return (0,0) to left bottom corner
+$
+$ Important nuance: rows with in_image=0 often store x=0, y=0 intentionally (dictionary-only entries have no placement).
+$
+$ ---
+$
+$ ## Semantics of flags
+$
+$ The SQLite fields are set directly in tools/jb2dumper.cpp:
+$
+$ - in_image=1 means the shape is placed/drawn on the page.
+$ - in_library=1 means the shape is stored in a dictionary (local or shared).
+$ - is_non_symbol=1 occurs for JB2 “non-symbol data” records.
+$
+$ ---
+$
+$ ## Prototype/refinement relationship (reference_id)
+$
+$ For “matched symbol with refinement” records, djvudict stores a link to a prototype via reference_id and marks is_refinement.
+$
+$ Caution: in the current upstream source, at least one handler named “copy without refinement” still appears to record is_refinement=1.
+$ So treat is_refinement as “derived from another shape” rather than a perfect “refinement vs copy” truth label unless verified on your dataset.
+$
+$ ---
+$
+$ ## Worked example workflow using the sample DB
+$
+$ Using samples/djvu_sqlite.db (SQLite):
+$
+$ 1) List forms (pages and shared dictionaries):
+$ $ SELECT id, position, entry_name, type FROM forms ORDER BY position;
+$
+$ 2) For a page form, get its page size and optional shared dict:
+$ $ SELECT f.entry_name, s.width, s.height, s.dpi, s.djbz_id
+$ $ FROM sjbz_info s
+$ $ JOIN forms f ON f.id = s.form_id
+$ $ WHERE s.form_id = <page_form_id>;
+$
+$ 3) List placed shapes (occurrences) on that page:
+$ $ SELECT local_id, x, y, width, height
+$ $ FROM letters
+$ $ WHERE form_id = <page_form_id> AND in_image = 1
+$ $ ORDER BY local_id;
+$
+$ 4) List dictionary-only shapes for a Djbz form (shared dictionary):
+$ $ SELECT local_id, width, height, filename
+$ $ FROM letters
+$ $ WHERE form_id = <djbz_form_id> AND in_library = 1 AND in_image = 0
+$ $ ORDER BY local_id;
+$
