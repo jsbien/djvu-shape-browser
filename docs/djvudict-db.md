@@ -50,14 +50,15 @@
  - entry_name STRING NOT NULL
  DjVu entry name (page name or shared dict entry name).
 
- - type INTEGER NOT NULL
+- type INTEGER NOT NULL
  Meaning:
  - 0 — unknown / not classified
- - 1 — Sjbz (page)
- - 2 — Djbz (shared dictionary)
+ - 1 — FORM:DJVU (page component; may contain Sjbz)
+ - 2 — FORM:DJVI (shared component; may contain Djbz, but may also be non-dictionary data such as shared annotations)
 
- - path_to_dump STRING
- Path where djvudict dumped bitmaps/logs for this entry (if dumping is enabled).
+- path_to_dump STRING
+ Path where djvudict dumped bitmaps/logs for this entry (if dumping is enabled). In our sample database, non-dictionary DJVI components have empty path_to_dump.
+
 
  ---
 
