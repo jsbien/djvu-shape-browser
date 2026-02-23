@@ -35,3 +35,7 @@ __pycache__/
 *.pyc
 shape_browser/shape_browser_djview.log
 shape_browser_djview.log
+
+*~
+\#*\#
+.\#*
