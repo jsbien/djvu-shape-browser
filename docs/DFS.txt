@@ -1,0 +1,24 @@
+DFS (Depth-First Search) is a standard way to traverse a tree:
+
+    Start at a root node.
+
+    Visit a node, then recursively visit each child before moving to the next sibling.
+
+When we do DFS, we can assign each node two numbers:
+
+    dfs_pre (also called “entry time”): the counter value when we first visit the node
+
+    dfs_post (also called “exit time”): the counter value when we finish visiting the node’s entire subtree
+
+Key property (the reason we want this):
+
+    For any node R, all descendants of R have dfs_pre values in the interval
+    R.dfs_pre … R.dfs_post.
+
+So the subtree query becomes a fast range filter:
+
+WHERE dfs_pre BETWEEN root.dfs_pre AND root.dfs_post
+
+With an index on (dictionary_id, dfs_pre), MariaDB can answer subtree queries very fast without recursive SQL or Python recursion at runtime.
+
+This is the robust fix for “subtree mode hangs” on huge datasets.
