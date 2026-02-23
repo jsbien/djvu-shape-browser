@@ -16,87 +16,42 @@ BUILD_TIMESTAMP = datetime.now().strftime("%Y-%m-%d-%H%M%S")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Shape Browser")
-
+    parser = argparse.ArgumentParser(description="Shape Browser (perf-auxdb)")
     parser.add_argument("--host", required=True)
     parser.add_argument("--user", required=True)
     parser.add_argument("--password", required=True)
-    parser.add_argument("--database", required=True)
+    parser.add_argument("--database", required=True)   # primary name, we will append __aux
     parser.add_argument("--document", type=int, required=True)
-    parser.add_argument(
-        "--djvu-root",
-        required=True,
-        help="Directory containing DjVu documents",
-    )
+    parser.add_argument("--djvu-root", required=True)
 
     args = parser.parse_args()
 
+    aux_db = args.database + "__aux"
     print(f"Shape Browser {VERSION}")
     print(f"Build: {BUILD_TIMESTAMP}")
+    print(f"Using aux DB: {aux_db}")
 
-    # ---------------------------------------------------
-    # Use auxiliary DB automatically
-    # ---------------------------------------------------
-    aux_db = args.database + "__aux"
-    print(f"Connecting to database (aux): {aux_db}")
+    repo = ShapeRepository(args.host, args.user, args.password, aux_db)
+    model = ShapeModel(repo, args.document)
 
-    repo = ShapeRepository(
-        args.host,
-        args.user,
-        args.password,
-        aux_db,
-    )
-
-    # ---------------------------------------------------
-    # Lazy model: load only root shapes
-    # ---------------------------------------------------
-    print("Loading root shapes...")
-    root_rows = repo.fetch_root_shapes(args.document)
-
-    print("Building model (lazy)...")
-    model = ShapeModel(repo, args.document, root_rows)
-
-    print("Initializing renderer...")
-    renderer = ShapeRenderer()
-
-    # ---------------------------------------------------
-    # Resolve document filename
-    # ---------------------------------------------------
-    documents = repo.fetch_documents()
-
-    document_row = None
-    for doc in documents:
-        if doc["id"] == args.document:
-            document_row = doc
-            break
-
-    if document_row is None:
-        print("Document not found in database.")
+    docs = repo.fetch_documents()
+    doc_row = next((d for d in docs if d["id"] == args.document), None)
+    if not doc_row:
+        print("Document not found.")
         sys.exit(1)
 
-    # repository.py uses:
-    # SELECT id, document FROM documents
-    document_filename = document_row["document"]
-
-    document_path = os.path.abspath(
-        os.path.join(args.djvu_root, document_filename)
-    )
-
+    document_filename = doc_row["document"]
+    document_path = os.path.abspath(os.path.join(args.djvu_root, document_filename))
     if not os.path.exists(document_path):
         print(f"DjVu file not found: {document_path}")
         sys.exit(1)
 
-    print(f"Using DjVu file: {document_path}")
     page_info = PageInfoProvider(document_path)
-    print(f"DjVu page count: {page_info.get_page_count()}")
-
-    print("Initializing DjView launcher...")
     djview_launcher = DjViewLauncher(document_path, page_info)
+    renderer = ShapeRenderer()
 
-    print("Launching GUI...")
     root = tk.Tk()
-
-    app = ShapeBrowserGUI(
+    ShapeBrowserGUI(
         root=root,
         model=model,
         renderer=renderer,
@@ -104,12 +59,12 @@ def main():
         version=VERSION,
         build_timestamp=BUILD_TIMESTAMP,
         djview_launcher=djview_launcher,
+        page_size=600,
     )
-
     root.mainloop()
-
     repo.close()
 
 
 if __name__ == "__main__":
     main()
+    
