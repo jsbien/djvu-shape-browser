@@ -1,0 +1,279 @@
+% https://www.overleaf.com/latex/examples/latex-portrait-poster-template/gybjbztdkvyg
+%\title{LaTeX Portrait Poster Template}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% a0poster Portrait Poster
+% LaTeX Template
+% Version 1.0 (22/06/13)
+%
+% The a0poster class was created by:
+% Gerlinde Kettl and Matthias Weiser (tex@kettl.de)
+% 
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[a0,portrait]{a0poster}
+\usepackage{fontspec}
+
+\usepackage{multicol} % This is so we can have multiple columns of text side-by-side
+\columnsep=100pt % This is the amount of white space between the columns in the poster
+\columnseprule=3pt % This is the thickness of the black line between the columns in the poster
+
+\usepackage[svgnames]{xcolor} % Specify colors by their 'svgnames', for a full list of all colors available see here: http://www.latextemplates.com/svgnames-colors
+
+% \usepackage{times} % Use the times font
+%\usepackage{palatino} % Uncomment to use the Palatino font
+
+\usepackage{graphicx} % Required for including images
+\graphicspath{{img/}} % Location of the graphics files
+\usepackage{booktabs} % Top and bottom rules for table
+\usepackage[font=small,labelfont=bf]{caption} % Required for specifying captions to tables and figures
+% \usepackage{amsfonts, amsmath, amsthm, amssymb} % For math fonts, symbols and environments
+\usepackage{wrapfig} % Allows wrapping text around tables and figures
+
+\usepackage{float}
+
+%\newfontfamily{\defaultfont}{Linux Libertine O}
+\newfontfamily{\defaultfont}{TeX Gyre Schola}
+
+\newcommand{\uname}[1]{{\index{#1}'\defaultfont\textsc{\MakeLowercase{#1}}'}}
+\newcommand{\ucode}[1]{{\defaultfont\texttt{U+#1}}}
+\newcommand{\mname}[1]{\index{#1}'MUFI \textsc{\MakeLowercase{#1}}'}
+\newcommand{\mcode}[1]{\texttt{M+#1}}
+\newcommand{\aname}[1]{\textsc{#1}}
+\newcommand{\acode}[1]{\textsc{#1}}
+\newcommand{\prname}[1]{\textsf{#1}}
+
+\newfontfamily{\mufi}{Junicode}
+\newcommand{\mufitags}[1]{{\mufi\addfontfeature{StylisticSet=10}#1}}
+
+\usepackage{hyperref}
+
+\begin{document}
+\defaultfont
+
+%----------------------------------------------------------------------------------------
+%	POSTER HEADER 
+%----------------------------------------------------------------------------------------
+
+% The header is divided into two boxes:
+% The first is 75% wide and houses the title, subtitle, names, university/organization and contact information
+% The second is 25% wide and houses a logo for your university/organization or a photo of you
+% The widths of these boxes can be easily edited to accommodate your content as you see fit
+
+\begin{minipage}[b]{0.75\linewidth}
+\veryHuge \color{NavyBlue} \textbf{Developing a tool for glyph spotting\\ in scanned printed texts} \color{Black}\\[0.25cm] % Title
+% \Huge\textit{a
+%   computer resource}\\[2cm] % Subtitle
+\huge \textbf{Janusz S. Bień} (ORCID 0000-0001-5006-8183) \\[0.5cm] % Author(s)
+\huge University of Warsaw (retired)\\[0.4cm] % University/organization
+\Large \texttt{jsbien@uw.edu.pl}, \url{https://jsbien.github.io/}\\
+% telefon --- 1 (000) 111 1111\\
+\end{minipage}
+%
+\begin{minipage}[b]{0.25\linewidth}
+\includegraphics[width=10cm]{img/jsbien.png}\\
+\end{minipage}
+
+\vspace{1cm} % A bit of extra whitespace between the header and poster content
+
+%----------------------------------------------------------------------------------------
+
+\begin{multicols}{2} % This is how many columns your poster will be broken into, a portrait poster is generally split into 2 columns
+
+%----------------------------------------------------------------------------------------
+%	ABSTRACT
+%----------------------------------------------------------------------------------------
+
+\color{Navy} % Navy color for the abstract
+
+\begin{abstract}
+  In document-image retrieval, word spotting (keyword spotting, KWS)
+  finds occurrences of a query image in page images without full OCR,
+  typically by retrieving similar word images using segmentation-based
+  candidates or segmentation-free sliding-window search. Many modern
+  KWS systems map each word image to a learned feature vector so that
+  instances of the same word lie close together, enabling efficient
+  nearest-neighbor retrieval. Our tool is related in spirit but
+  targets glyph-level retrieval in historical printed material by
+  exploiting a DjVu-specific property: shape dictionaries with
+  explicit occurrence lists produced by the DjVu encoding
+  pipeline for compression purposes.
+  % This shifts emphasis from candidate generation to
+  % interactive inspection, filtering, and curation of automatically
+  % clustered shape classes, supporting a curated glyph image collection
+  % (“glyph gallery”) and typographic inventories when
+  % segmentation—often the bottleneck in query-by-example KWS—is
+  % unreliable.
+\end{abstract}
+
+%----------------------------------------------------------------------------------------
+%	INTRODUCTION
+%----------------------------------------------------------------------------------------
+
+\color{SaddleBrown} % SaddleBrown color for the introduction
+
+\section*{Introduction}
+
+The DjVu format was once popular in  digital libraries, including
+the Internet Archive.\footnote{\url{https://en.wikipedia.org/wiki/DjVu}}
+However, not every DjVu document contains the shape dictionaries we are
+interested in. If not, it has to be regenerated, e.g. using Jakub Wilk's
+\textsf{didjvu} tool, currently maintained by Friedrich
+Froebel\footnote{\url{https://github.com/FriedrichFroebel/didjvu}}.
+% Fröbel
+
+A browser for the shape dictionary was developed by Michał Rudolf
+(later, a major contribution was made by Alexander
+Trufanov).\footnote{\url{https://github.com/jsbien/djview4shapes}}
+Unfortunately the tool, see Fig.~\ref{fig:K-C-e}, in practice appeared
+not sufficiently convenient.
+
+%\begin{figure}[ht]
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\hsize]{lB42}
+  \caption{\prname{djview4shapes} and Gutenberg's bible}
+  \label{fig:K-C-e}
+\end{figure}
+
+I also designed a more sophisticated tool and an attempt to implement
+it was made by Piotr Sikora. The idea was to have a database of shapes
+from many documents that could be updated and queried remotely, and a
+client used to browse and label the
+shapes.\footnote{\url{https://github.com/jsbien/ndt/wiki/z_shapes}}
+Unfortunately the tool was prohibitively slow and there was neither
+the opportunity nor motivation to try to fix it.
+
+%\begin{figure}[ht]
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\hsize]{e1_01.png}
+  \caption{Piotr Sikora's shape labelling client}
+  \label{fig:Sikora}
+\end{figure}
+
+Recently I had a fresh look at Sikora's \textit{exportshapes} utility
+used for exporting shapes to a SQL compatible database and found that
+it is still usable and serves well its purpose, the problem is only
+with the client. However in the meantime my needs changed and I
+decided to design and develop a completely new client. I am not
+a programmer but the availability of AI chat tools made this task feasible.
+I present here a progress report.
+  % ----------------------------------------------------------------------------------------
+
+\color{DarkSlateGray} % DarkSlateGray color for the rest of the content
+
+
+
+%\small
+
+\section{The repository}
+
+The tool is developed in a standard public \textsf{Git} repository on
+GitHub, the software is available under an open-source
+license.\footnote{\url{https://github.com/jsbien/shape-browser4djvu}}. The
+repository site has standard tabs for reporting issues and for
+discussions. Wiki is enabled but not used at present.
+
+The repository has several so-called branches. Besides those used for
+the development (the good practice is to test first the new features
+in a separate branch) an important one is the Sikora branch with the
+source of the \textsf{exportshapes} tool.
+
+The tool is developed in Python on a Debian GNU/Linux
+platform. Porting to Windows should be possible, but I'm not
+interested in it.
+
+At this stage, GUI aesthetics are a low priority.
+
+For testing purposes I use \textit{[Exercitium veteris
+  artis]. Argumentum in librum Porphyrii} published in 1504 by Jan
+Haller, the digitization is available in Wielkopolska Digital
+Library.\footnote{\url{https://www.wbc.poznan.pl/dlibra/publication/559203/edition/479475}}
+Its DjVu version has 586\,035 shapes.
+\section{The shape browser}
+
+Figure~\ref{fig:djview} illustrates some of the features of the tool.
+
+It should be noted that the shapes in the shape dictionaries are
+organized as trees. It should be also noted that the shapes are just
+connected components (i.e. groups of neighboring black pixels in the
+binary mask), so e.g.  diacritics are separated from the base letter,
+on the other hand characters merged by ink bleed are considered to be
+a single shape. Despite these drawbacks I consider the shape
+dictionary a good first approximation of the character inventory for a
+given text.
+
+In the figure, one of the root shapes is selected (in the red frame) and
+in the  bottom-right corner we see a panel with its properties. From
+a practical standpoint, the most important information is about the
+occurrences of the shape in the text: there is one occurrence on page 111
+at the coordinates x=780 and y=645. Clicking on this information
+opens the \textsf{djview} viewer with the occurrence
+centered on the screen. If we want to see a larger context, we can
+simply use the \textsf{djview} zoom commands.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\hsize]{djview}
+  \caption{A sample shape}
+  \label{fig:djview}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\hsize]{djview_zoom}
+  \caption{A shape context: \textit{Arguitur quarto:
+      \textbf{substantia} non est genus
+      \ldots}\protect\footnotemark}
+  \label{fig:djview_zoom}
+\end{figure}
+\footnotetext{\url{https://latin.stackexchange.com/questions/27099/a-brevigraph-meaning}}
+% https://latin.stackexchange.com/questions/27099/a-brevigraph-meaning
+% It's not my area but at a guess I would say substantia. – Cairnarvon
+% Cairnarvon may be right, but I don't recognise this as a common
+% abbreviation, except that b followed by a curl like that would
+% normally be something like ber. Before that it is indeed Arguituir
+% quarto, and after non est genus. Can you post more context, a much
+% larger part of the text? The link doesn't work for me. – Cerberus
+
+
+In the top-left corner we have several bars: menu bar, banner bar with
+some information about the current display, and the most important
+filter bar. As the number of shapes can be very large, we can limit
+the number of displayed shapes in several ways. In particular it is
+practical to browse first just the roots of the shape trees.
+
+
+
+\section{Final remark}
+\label{sec:final-remarks}
+I'm developing the tool for my personal use without any funding or
+institutional support.  I hope to use it to supplement some items in
+the so-called Typoglyph Gallery with the Unicode encoding of the
+glyphs which sometimes are far from
+obvious\footnote{\url{https://jsbien.github.io/typoglyphs/}}. I would
+be glad if the tool also proved useful for others.
+
+The text was proofread by ChatGPT, which also drafted the abstract.
+\end{multicols}
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% ispell-local-dictionary: "english"
+%%% TeX-master: t
+%%% coding: utf-8-unix
+%%% TeX-PDF-mode: t
+%%% TeX-engine: xetex
+%%% End:
+
